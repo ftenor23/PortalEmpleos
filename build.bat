@@ -1,0 +1,1 @@
+docker build -t portal_empleos .
