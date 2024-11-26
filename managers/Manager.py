@@ -47,7 +47,7 @@ def user_registered(cnx, cursor, final_response, email=None, is_candidate=None, 
             query = f'''
                                 SELECT  * 
                                 FROM    Usuarios
-                                WHERE   candidate_id = %s
+                                WHERE   user_id = %s
                                 AND     role = 0'''
             values = (candidate_id,)
 
@@ -939,12 +939,13 @@ def get_total_job_offers(cnx, cursor, final_response, request_id=None):
     try:
 
         query = '''
-                SELECT      e.sector,
-                            COUNT(ed.job_offer_id) AS job_offer_count
-                FROM        Empleos_Disponibles ed
-                JOIN        Empresas e 
-                ON          ed.company_id = e.company_id
-                GROUP BY    e.sector;
+                SELECT 
+                    se.company_type,
+                    COUNT(ed.job_offer_id) AS sector_count
+                FROM Empleos_Disponibles ed
+                INNER JOIN Empresas e ON ed.company_id = e.company_id
+                INNER JOIN Sector_empresa se ON e.company_type = se.company_type_id
+                GROUP BY se.company_type;
                 '''
 
         '''Resultado de query:
@@ -959,10 +960,7 @@ def get_total_job_offers(cnx, cursor, final_response, request_id=None):
         cursor.execute(query)
         results_dict = cursor.fetchall()
 
-        final_response['data'] = {
-            "number_of_job_offers": sum(item["job_offer_count"] for item in results_dict),
-            "business_sector": {item["sector"]: item["job_offer_count"] for item in results_dict}
-        }
+        final_response['data'] = results_dict
 
     except:
         logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
@@ -979,15 +977,17 @@ def get_total_successful_job_offers(cnx, cursor, final_response, request_id=None
     try:
 
         query = '''
-                SELECT      e.sector,
+                SELECT      se.company_type as bussines_sector,
                             COUNT(DISTINCT s.job_offer_id) AS successful_job_offer_count
                 FROM        Solicitudes s
                 JOIN        Empleos_Disponibles ed 
                 ON          s.job_offer_id = ed.job_offer_id
                 JOIN        Empresas e 
                 ON          ed.company_id = e.company_id
+                JOIN        Sector_empresa se
+                on          e.company_type = se.company_type_id
                 WHERE       s.status = 1
-                GROUP BY    e.sector;
+                GROUP BY    e.company_type;
                 '''
 
         '''Resultado de query:
@@ -1002,10 +1002,7 @@ def get_total_successful_job_offers(cnx, cursor, final_response, request_id=None
         cursor.execute(query)
         results_dict = cursor.fetchall()
 
-        final_response['data'] = {
-            "number_of_successful_job_offers": sum(item["successful_job_offer_count"] for item in results_dict),
-            "business_sector": {item["sector"]: item["successful_job_offer_count"] for item in results_dict}
-        }
+        final_response['data'] = results_dict
 
     except:
         logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
@@ -1065,7 +1062,7 @@ def upload_work_experience(cnx, cursor, final_response, candidate_id, job_id, co
         cnx.commit()
 
         logger.info(f"{request_id} - se cargo correctamente la experiencia del candidato {candidate_id}")
-
+        final_response['data'] = True
     except:
         logger.exception(f"{request_id} - error al acceder a la base de datos")
         final_response['ok'] = False

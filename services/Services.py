@@ -307,10 +307,22 @@ def get_stats(data_request):
     logger.info(f"{g.request_id} - ingresando a /getStats")
 
     try:
-        total_candidates = data_request['total_candidates']
-        total_companies = data_request['total_companies']
-        total_job_offers = data_request['total_job_offers']
-        successful_job_offers = data_request['successfull_job_offers']
+        total_candidates = None
+        total_companies = None
+        total_job_offers = None
+        successful_job_offers = None
+
+        if 'total_candidates' in data_request:
+            total_candidates = data_request['total_candidates']
+
+        if 'total_companies' in data_request:
+            total_companies = data_request['total_companies']
+
+        if 'total_job_offers' in data_request:
+            total_job_offers = data_request['total_job_offers']
+
+        if 'succesfull_job_offers' in data_request:
+            successful_job_offers = data_request['successfull_job_offers']
     except:
         logger.exception(f"{g.request_id} - mensaje malformado")
         return {"code": "0400", "description": "bad request"}, 400

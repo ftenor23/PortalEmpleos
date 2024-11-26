@@ -113,3 +113,20 @@ def format_candidate_experience(data):
         person['experience'] = json.loads(person['experience'])
 
     return data
+
+def format_job_offers(data):
+    return {
+        "number_of_job_offers": sum(item['sector_count'] for item in data),
+        "business_sector": {item['company_type']: item['sector_count'] for item in data}
+    }
+
+def format_succesful_job_offers(data):
+    return {
+        "number_of_successful_job_offers": sum(item['successful_job_offer_count'] for item in data),
+        "business_sector": {item['bussines_sector']: item['successful_job_offer_count'] for item in data}
+    }
+
+def format_companies_response(data):
+    for item in data:
+        item['business_sector'] = json.loads(item['business_sector'])
+    return data

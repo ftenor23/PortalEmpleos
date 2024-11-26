@@ -483,8 +483,11 @@ def get_stats(total_candidates, total_companies, total_job_offers, successful_jo
             return {'code': '0500',
                     'description': ServiceConfig.get_stats_code_map['0500']}
 
+        logger.info(f"{g.request_id} - total companies: {total_companies_response['data']}")
         logger.info(f"{g.request_id} - estadisticas de las empresas obtenidas correctamente")
-        data['total_companies'] = total_companies_response['data']
+
+        total_companies_formatted = Utils.format_companies_response(total_companies_response['data'])
+        data['total_companies'] = total_companies_formatted
 
     if total_job_offers:
         total_job_offers_response = Manager.get_total_job_offers(request_id=g.request_id)
@@ -494,8 +497,11 @@ def get_stats(total_candidates, total_companies, total_job_offers, successful_jo
             return {'code': '0500',
                     'description': ServiceConfig.get_stats_code_map['0500']}
 
+        logger.info(f"{g.request_id} - total job offers response - {total_job_offers_response}")
+
+        total_job_offers_formatted = Utils.format_job_offers(total_job_offers_response['data'])
         logger.info(f"{g.request_id} - estadisticas de las ofertas de trabajo obtenidas correctamente")
-        data['total_candidates'] = total_job_offers_response['data']
+        data['total_job_offers'] = total_job_offers_formatted
 
     if successful_job_offers:
         successful_job_offers_response = Manager.get_total_successful_job_offers(request_id=g.request_id)
@@ -505,8 +511,11 @@ def get_stats(total_candidates, total_companies, total_job_offers, successful_jo
             return {'code': '0500',
                     'description': ServiceConfig.get_stats_code_map['0500']}
 
+        logger.info(f"{g.request_id} - informacion de ofertas de trabajo obtenidas {successful_job_offers_response['data']}")
         logger.info(f"{g.request_id} - estadisticas de las ofertas de trabajo exitosas obtenidas correctamente")
-        data['total_candidates'] = successful_job_offers_response['data']
+
+        successful_job_offers_formatted = Utils.format_succesful_job_offers(successful_job_offers_response['data'])
+        data['successful_job_offers'] = successful_job_offers_formatted
 
     return {'code': '0200',
             'description': ServiceConfig.get_stats_code_map['0200'],
