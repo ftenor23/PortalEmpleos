@@ -1,18 +1,46 @@
 from config import ServerConfig
-import ConnectionManager
 from managers.ConnectionManager import manage_db_connection
 logger = ServerConfig.rootLogger.getChild(__name__)
 
 
-
-def get_user_data_with_public_id(public_id):
+@manage_db_connection
+def get_user_data_login(cnx, cursor, final_response,user_id, is_candidate, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
 
+    try:
+        if is_candidate:
+            role = '0'
+        else:
+            role = '1'
+
+        query_get_user_id = """
+                                    SELECT  name,
+                                            last_name
+                                    FROM    usuarios
+                                    WHERE   user_id = %s 
+                                    AND     role = %s  
+                            """
+        values = (user_id, role)
+        cursor.execute(query_get_user_id, values)
+        results_dict = cursor.fetchone()
+
+        if not results_dict:
+            logger.info(f"{request_id} - no se encontraron registros")
+            final_response['data'] = False
+
+        else:
+            logger.info(f"{request_id} - usuario encontrado")
+            final_response['data'] = results_dict
+    except:
+        logger.exception(f"{request_id} - error al obtener datos del usuario {user_id}")
+        final_response['ok'] = False
+
     return final_response
 
+
 @manage_db_connection
-def user_registered(cnx, cursor, final_response, email=None, is_candidate=None, candidate_id = None):
+def user_registered(cnx, cursor, final_response, email=None, is_candidate=None, candidate_id = None, request_id=None):
 
     try:
         if candidate_id:
@@ -44,13 +72,13 @@ def user_registered(cnx, cursor, final_response, email=None, is_candidate=None, 
 
         final_response['data'] = results_dict
     except:
-        logger.exception(f"error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} {request_id}error al acceder a la bd")
         final_response['ok'] = False
     return final_response
 
 #se usa la misma funcion para generar usuario candidato o empleador
 @manage_db_connection
-def create_user(cnx, cursor, final_response, name, last_name, email, password, is_candidate):
+def create_user(cnx, cursor, final_response, name, last_name, email, password, is_candidate, request_id=None):
 
     try:
         #role = 0 -> candidato
@@ -71,29 +99,29 @@ def create_user(cnx, cursor, final_response, name, last_name, email, password, i
                                          %s, 
                                          %s)"""
         if is_candidate:
-            logger.info(f"insertando candidato en tabla usuarios")
+            logger.info(f"{request_id} - insertando candidato en tabla usuarios")
             values = (name, last_name, email, password, "0")
         else:
-            logger.info(f"insertando empleador en tabla usuarios")
+            logger.info(f"{request_id} - insertando empleador en tabla usuarios")
             values = (name, last_name, email, password, "1")
 
         cursor.execute(query_users, values)
         cnx.commit()
 
-        logger.info(f"usuario insertado correctamente en tabla Usuarios")
+        logger.info(f"{request_id} - usuario insertado correctamente en tabla Usuarios")
 
 
     except:
-        logger.exception(f"error al generar usuario")
+        logger.exception(f"{request_id} - error al generar usuario")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def insert_employer_actual_company(cnx, cursor, final_response, user_id, company_id):
+def insert_employer_actual_company(cnx, cursor, final_response, user_id, company_id, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
-    logger.info(f"insertando lugar de trabajo actual del {user_id}")
+    logger.info(f"{request_id} - insertando lugar de trabajo actual del {user_id}")
 
     try:
         query = """
@@ -108,16 +136,16 @@ def insert_employer_actual_company(cnx, cursor, final_response, user_id, company
         cursor.execute(query, values)
         cnx.commit()
 
-        logger.info(f"lugar de trabajo cargado correctamente")
+        logger.info(f"{request_id} - {request_id} - lugar de trabajo cargado correctamente")
 
     except:
-        logger.exception(f"error al cargar lugar de trabajo")
+        logger.exception(f"{request_id} - error al cargar lugar de trabajo")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def get_user_id_with_email(cnx, cursor, final_response, email):
+def get_user_id_with_email(cnx, cursor, final_response, email, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
     try:
@@ -134,24 +162,24 @@ def get_user_id_with_email(cnx, cursor, final_response, email):
 
         if results_dict:
             user_id = results_dict['user_id']
-            logger.info(f"usuario dado de alta: {user_id}")
+            logger.info(f"{request_id} - usuario dado de alta: {user_id}")
             final_response['data'] = {'user_id': user_id}
     except:
-        logger.exception(f"error al obtener user_id")
+        logger.exception(f"{request_id} - error al obtener user_id")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def insert_candidate_resume_url(cnx, cursor, final_response, user_id, resume_url):
+def insert_candidate_resume_url(cnx, cursor, final_response, user_id, resume_url, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
-    logger.info(f"insertando url del cv del usuario {user_id}")
+    logger.info(f"{request_id} - insertando url del cv del usuario {user_id}")
 
     try:
         query = """
                 INSERT INTO
-                candidatos (user_id, 
+                candidatos (candidate_id, 
                             resume_url)
                 VALUES 
                            (%s,
@@ -162,16 +190,16 @@ def insert_candidate_resume_url(cnx, cursor, final_response, user_id, resume_url
         cursor.execute(query, values)
         cnx.commit()
 
-        logger.info(f"cv cargado correctamente")
+        logger.info(f"{request_id} - cv cargado correctamente")
 
     except:
-        logger.exception(f"error al insertar cv")
+        logger.exception(f"{request_id} - error al insertar cv")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def insert_candidate_skills(cnx, cursor, final_response, skill_list, user_id):
+def insert_candidate_skills(cnx, cursor, final_response, skill_list, user_id, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
 
@@ -191,27 +219,27 @@ def insert_candidate_skills(cnx, cursor, final_response, skill_list, user_id):
         cursor.executemany(query, values)
         cnx.commit()
 
-        logger.info(f"se insertaron {len(skill_list)} habilidades para el user {user_id}")
+        logger.info(f"{request_id} - se insertaron {len(skill_list)} habilidades para el user {user_id}")
 
     except:
-        logger.exception(f"error al insertar habilidades en base de datos")
+        logger.exception(f"{request_id} - error al insertar habilidades en base de datos")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def get_user_data(cnx, cursor, final_response, email, password):
+def get_user_data(cnx, cursor, final_response, email, password, request_id=None):
     final_response = {'ok': True,
                       'data': False}
     try:
 
         query_login = """
                     SELECT  user_id,
-                            first_name,
+                            name,
                             last_name
                     FROM    usuarios
                     WHERE   email = %s 
-                    AND     password = %s
+                    AND     encrypted_password = %s
                       """
         #en este punto habria que desencriptar la password?
         values = (email, password)
@@ -221,20 +249,20 @@ def get_user_data(cnx, cursor, final_response, email, password):
         # si se encuentra un usuario con los datos ingresados, se devuelve la data
         if results_dict:
             user_id = results_dict['user_id']
-            first_name = results_dict['first_name']
+            first_name = results_dict['name']
             last_name = results_dict['last_name']
             final_response['data'] = {'user_id': user_id,
                                       'first_name': first_name,
                                       'last_name': last_name}
 
     except:
-        logger.exception(f"error al realizar login")
+        logger.exception(f"{request_id} - error al realizar login")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def company_exists(cnx, cursor, final_response, company_id=None, tax_id=None):
+def company_exists(cnx, cursor, final_response, company_id=None, tax_id=None, request_id=None):
     #verificamos si ya existe una empresa registrada con ese CUIT. si existe, devolvemos data= True
     final_response = {'ok': True,
                       'data': False}
@@ -264,17 +292,17 @@ def company_exists(cnx, cursor, final_response, company_id=None, tax_id=None):
         results_dict = cursor.fetchone()
 
         if results_dict:
-            logger.info(f"se encontro una empresa")
+            logger.info(f"{request_id} - se encontro una empresa")
             final_response['data'] = True
         else:
-            logger.info(f"no se encontro empresa para los datos indicados")
+            logger.info(f"{request_id} - no se encontro empresa para los datos indicados")
     except:
-        logger.exception(f"error al buscar empresa por cuit/id")
+        logger.exception(f"{request_id} - error al buscar empresa por cuit/id")
         final_response['ok'] = False
     return final_response
 
 @manage_db_connection
-def create_new_company(cnx, cursor, final_response, name, description, tax_id):
+def create_new_company(cnx, cursor, final_response, name, description, tax_id, company_type, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
 
@@ -285,28 +313,30 @@ def create_new_company(cnx, cursor, final_response, name, description, tax_id):
                     Empresas
                             (name, 
                             description,
-                            tax_id) 
+                            tax_id, 
+                            company_type) 
                     VALUES  (%s, 
+                            %s,
                             %s,
                             %s)
                     """
         # Creamos una lista de tuplas para la inserción
-        values = (name, description, tax_id)
+        values = (name, description, tax_id, company_type)
 
         cursor.execute(query, values)
         cnx.commit()
 
         #todo seguir
-        logger.info(f"se cargo correctamente la empresa {name}")
+        logger.info(f"{request_id} - se cargo correctamente la empresa {name}")
 
     except:
-        logger.exception(f"error al cargar nueva empresa")
+        logger.exception(f"{request_id} - error al cargar nueva empresa")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def job_exists(cnx, cursor, final_response, name=None,description=None, requirements=None, job_id=None):
+def job_exists(cnx, cursor, final_response, name=None,description=None, requirements=None, job_id=None, request_id=None):
     #verificamos si ya existe un trabajo registrado. si existe, devolvemos data= True
     final_response = {'ok': True,
                       'data': False}
@@ -334,17 +364,18 @@ def job_exists(cnx, cursor, final_response, name=None,description=None, requirem
         results_dict = cursor.fetchone()
 
         if not results_dict:
-            logger.info(f"el empleo no esta registrado")
-            final_response['data'] = True
+            logger.info(f"{request_id} - el empleo no esta registrado")
+            final_response['data'] = False
         else:
-            logger.info(f"{request_id} - se encontro un empleo registrado")
+            logger.info(f"{request_id} - {request_id} - se encontro un empleo registrado")
+            final_response['data'] = True
     except:
-        logger.exception(f"{request_id} - error al buscar si el empleo ya esta registrado")
+        logger.exception(f"{request_id} - {request_id} - error al buscar si el empleo ya esta registrado")
         final_response['ok'] = False
     return final_response
 
 @manage_db_connection
-def create_new_job(cnx, cursor, final_response, name, description, requirements):
+def create_new_job(cnx, cursor, final_response, name, description, requirements, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
 
@@ -367,16 +398,16 @@ def create_new_job(cnx, cursor, final_response, name, description, requirements)
         cnx.commit()
 
         # todo seguir
-        logger.info(f"se cargo correctamente el nuevo tipo de trabajo: {name}")
+        logger.info(f"{request_id} - se cargo correctamente el nuevo tipo de trabajo: {name}")
 
     except:
-        logger.exception(f"error al cargar nueva empresa")
+        logger.exception(f"{request_id} - error al cargar nueva empresa")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def job_offer_exists(cnx, cursor, final_response, company_id, job_id, salary, location):
+def job_offer_exists(cnx, cursor, final_response, company_id, job_id, salary, location, request_id=None):
     # verificamos si ya existe una oferta de trabajo registrada. si existe, devolvemos data= True
     final_response = {'ok': True,
                       'data': True}
@@ -389,7 +420,7 @@ def job_offer_exists(cnx, cursor, final_response, company_id, job_id, salary, lo
                 WHERE   company_id = %s
                 AND     job_id = %s
                 AND     salary = %s
-                AND     location = %s
+                AND     location_id = %s
                 AND     status = 1
             '''
 
@@ -398,18 +429,18 @@ def job_offer_exists(cnx, cursor, final_response, company_id, job_id, salary, lo
         results_dict = cursor.fetchone()
 
         if not results_dict:
-            logger.info(f"la oferta de trabajo no existe o no esta mas activa")
+            logger.info(f"{request_id} - la oferta de trabajo no existe o no esta mas activa")
             final_response['data'] = False
         else:
-            logger.info(f"{request_id} - la oferta se encuentra activa")
+            logger.info(f"{request_id} - {request_id} - la oferta se encuentra activa")
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def create_new_job_offer(cnx, cursor, final_response, company_id, job_id, description, salary, location):
+def create_new_job_offer(cnx, cursor, final_response, company_id, job_id, salary, location, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
 
@@ -421,32 +452,32 @@ def create_new_job_offer(cnx, cursor, final_response, company_id, job_id, descri
                                 (company_id, 
                                 job_id,
                                 salary,
-                                description,
-                                location,
-                                publication_date) 
+                                location_id,
+                                publication_date,
+                                status) 
                         VALUES  (%s, 
                                 %s,
                                 %s,
                                 %s,
-                                %s,
-                                NOW())
+                                NOW(),
+                                1)
                         """
         # Creamos una lista de tuplas para la inserción
-        values = (company_id, job_id, salary, description, location)
+        values = (company_id, job_id, salary, location)
 
         cursor.execute(query, values)
         cnx.commit()
 
-        logger.info(f"se cargo correctamente el la nueva oferta de trabajo")
+        logger.info(f"{request_id} - se cargo correctamente el la nueva oferta de trabajo")
 
     except:
-        logger.exception(f"error al acceder a la base de datos")
+        logger.exception(f"{request_id} - error al acceder a la base de datos")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def job_offer_is_active(cnx, cursor, final_response, job_offer_id):
+def job_offer_is_active(cnx, cursor, final_response, job_offer_id, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
     try:
@@ -463,20 +494,20 @@ def job_offer_is_active(cnx, cursor, final_response, job_offer_id):
         results_dict = cursor.fetchone()
 
         if not results_dict:
-            logger.info(f"la oferta de trabajo no esta mas activa")
+            logger.info(f"{request_id} - la oferta de trabajo no esta mas activa")
             final_response['data'] = False
         else:
-            logger.info(f"{request_id} - la oferta se encuentra activa")
+            logger.info(f"{request_id} - {request_id} - la oferta se encuentra activa")
             final_response['data'] = True
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def user_already_applied_for_job(cnx, cursor, final_response, job_offer_id, candidate_id):
+def user_already_applied_for_job(cnx, cursor, final_response, job_offer_id, candidate_id, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
     try:
@@ -493,20 +524,20 @@ def user_already_applied_for_job(cnx, cursor, final_response, job_offer_id, cand
         results_dict = cursor.fetchone()
 
         if not results_dict:
-            logger.info(f"el usuario no esta postulado a la oferta")
+            logger.info(f"{request_id} - el usuario no esta postulado a la oferta")
             final_response['data'] = False
         else:
-            logger.info(f"{request_id} - el usuario ya se postulo previamente")
+            logger.info(f"{request_id} - {request_id} - el usuario ya se postulo previamente")
             final_response['data'] = True
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     #devolver data = True en caso de que se haya postulado
     return final_response
 
 @manage_db_connection
-def job_application(cnx, cursor, final_response, job_offer_id, candidate_id):
+def job_application(cnx, cursor, final_response, job_offer_id, candidate_id, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
     try:
@@ -530,17 +561,17 @@ def job_application(cnx, cursor, final_response, job_offer_id, candidate_id):
         cursor.execute(query, values)
         cnx.commit()
 
-        logger.info(f"se cargo correctamente la postulacion")
+        logger.info(f"{request_id} - se cargo correctamente la postulacion")
 
     except:
-        logger.exception(f"error al acceder a la base de datos")
+        logger.exception(f"{request_id} - error al acceder a la base de datos")
         final_response['ok'] = False
 
     #devolver data = True en caso de que se haya postulado
     return final_response
 
 @manage_db_connection
-def get_applicants_information(cnx, cursor, final_response, job_offer_id):
+def get_applicants_information(cnx, cursor, final_response, job_offer_id, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
     try:
@@ -553,24 +584,26 @@ def get_applicants_information(cnx, cursor, final_response, job_offer_id):
                     c.resume_url,
                     u.email,
                     GROUP_CONCAT(DISTINCT s.name) AS skills,
-                    JSON_ARRAYAGG(JSON_OBJECT(
-                        'job_name', e.title,
-                        'start_date', ex.start_date,
-                        'end_date', ex.end_date,
-                        'company_name', em.name
-                    )) AS experience
+                    JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'job_name', e.title,
+                            'start_date', ex.start_date,
+                            'end_date', ex.end_date,
+                            'company_name', em.name
+                        )
+                    ) AS experience
                 FROM 
                     Solicitudes sol
                 JOIN 
-                    Candidatos c ON sol.candidate_id = c.user_id
+                    Candidatos c ON sol.candidate_id = c.candidate_id
                 JOIN 
-                    Usuarios u ON c.user_id = u.user_id
+                    Usuarios u ON c.candidate_id = u.user_id
                 LEFT JOIN 
-                    Habilidades_x_Candidato hc ON c.user_id = hc.candidate_id
+                    Habilidades_x_Candidato hc ON c.candidate_id = hc.candidate_id
                 LEFT JOIN 
                     Habilidades s ON hc.skill_id = s.skill_id
                 LEFT JOIN 
-                    Experiencias ex ON c.user_id = ex.candidate_id
+                    Experiencias ex ON c.candidate_id = ex.candidate_id
                 LEFT JOIN 
                     Empleos e ON ex.job_id = e.job_id
                 LEFT JOIN 
@@ -579,6 +612,7 @@ def get_applicants_information(cnx, cursor, final_response, job_offer_id):
                     sol.job_offer_id = %s
                 GROUP BY 
                     u.user_id;
+                ;
                 '''
 
         values = (job_offer_id,)
@@ -586,18 +620,19 @@ def get_applicants_information(cnx, cursor, final_response, job_offer_id):
         results_dict = cursor.fetchall()
 
         if not results_dict:
-            logger.info(f"no se encontraron usuarios postulados")
+            logger.info(f"{request_id} - no se encontraron usuarios postulados")
         else:
-            logger.info(f"{request_id} - se encontro informacion de los usuarios")
+            logger.info(f"{request_id} - {request_id} - se encontro informacion de los usuarios")
             final_response['data'] = results_dict
+
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     #en data se devuelve informacion de las querys
     return final_response
 
 @manage_db_connection
-def get_available_jobs(cnx, cursor, final_response, company_id):
+def get_available_jobs(cnx, cursor, final_response, company_id, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
     try:
@@ -610,7 +645,7 @@ def get_available_jobs(cnx, cursor, final_response, company_id):
                         e.title AS job_title,
                         e.description AS job_description,
                         e.requirements,
-                        ed.salary,
+                        CAST(ed.salary AS CHAR) AS salary,
                         u.name AS location
                     FROM 
                         Empresas em
@@ -636,7 +671,7 @@ def get_available_jobs(cnx, cursor, final_response, company_id):
                         e.title AS job_title,
                         e.description AS job_description,
                         e.requirements,
-                        ed.salary,
+                        CAST(ed.salary AS CHAR) AS salary,
                         u.name AS location
                     FROM 
                         Empresas em
@@ -654,34 +689,43 @@ def get_available_jobs(cnx, cursor, final_response, company_id):
         results_dict = cursor.fetchall()
 
         if not results_dict:
-            logger.info(f"no se encontraron empleos disponibles")
+            logger.info(f"{request_id} - no se encontraron empleos disponibles")
             final_response['data'] = {}
         else:
-            logger.info(f"{request_id} - se encontraron registros")
+            logger.info(f"{request_id} - {request_id} - se encontraron registros")
             final_response['data'] = results_dict
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     #en data se devuelve informacion de las querys
     return final_response
 
 @manage_db_connection
-def get_user_applications(cnx, cursor, final_response, candidate_id):
+def get_user_applications(cnx, cursor, final_response, candidate_id, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
     try:
 
         query = '''
                 SELECT 
-                        ed.job_title,
-                        ed.company_name,
-                        ed.publication_date,
-                        s.application_id
-                FROM    Empleos_Disponibles ed
-                JOIN    Solicitudes s 
-                ON      ed.job_offer_id = s.job_offer_id
-                WHERE   s.candidate_id = %s
+                    s.application_id,
+                    s.application_date,
+                    e.title AS job_title,   
+                    emp.name AS company_name 
+                FROM    
+                    Empleos_Disponibles ed
+                JOIN    
+                    Solicitudes s 
+                    ON ed.job_offer_id = s.job_offer_id
+                JOIN    
+                    Empleos e  
+                    ON ed.job_id = e.job_id
+                JOIN    
+                    Empresas emp 
+                    ON ed.company_id = emp.company_id
+                WHERE   
+                    s.candidate_id = %s;
                 '''
 
         values = (candidate_id,)
@@ -689,19 +733,19 @@ def get_user_applications(cnx, cursor, final_response, candidate_id):
         results_dict = cursor.fetchall()
 
         if results_dict:
-            logger.info(f"{request_id} - se encontraron postulaciones del usuario")
+            logger.info(f"{request_id} - {request_id} - se encontraron postulaciones del usuario")
             final_response['data'] = results_dict
         else:
-            logger.info(f"{request_id} - no se encontraron postulaciones del usuario")
+            logger.info(f"{request_id} - {request_id} - no se encontraron postulaciones del usuario")
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def get_application_status(cnx, cursor, final_response, application_id):
+def get_application_status(cnx, cursor, final_response, application_id, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
     try:
@@ -711,11 +755,11 @@ def get_application_status(cnx, cursor, final_response, application_id):
                         s.application_date,
                         s.status,
                         CASE s.status
-                            WHEN 0 THEN 'rechazado'
-                            WHEN 1 THEN 'aceptado'
-                            WHEN 2 THEN 'en revision'
-                            WHEN 3 THEN 'recibido'
-                            ELSE 'status desconocido' 
+                            WHEN 0 THEN 'rejected'
+                            WHEN 1 THEN 'accepted'
+                            WHEN 2 THEN 'pending'
+                            WHEN 3 THEN 'received'
+                            ELSE 'unknown status' 
                         END AS status_description
                 FROM    Solicitudes s 
                 WHERE   s.application_id = %s
@@ -728,13 +772,13 @@ def get_application_status(cnx, cursor, final_response, application_id):
         final_response['data'] = results_dict
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     # en data se devuelve informacion de las querys. en caso de que no se encuentre nada, significa que no se encontro
     return final_response
 
 @manage_db_connection
-def get_application_with_company_id(cnx, cursor, final_response, company_id):
+def get_application_with_company_id(cnx, cursor, final_response, company_id, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
     try:
@@ -761,14 +805,14 @@ def get_application_with_company_id(cnx, cursor, final_response, company_id):
         final_response['data'] = results_dict
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     # en data se devuelve informacion de las querys
     return final_response
 
 
 @manage_db_connection
-def change_application_status(cnx, cursor, final_response, application_id, new_status):
+def change_application_status(cnx, cursor, final_response, application_id, new_status, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
     try:
@@ -786,21 +830,21 @@ def change_application_status(cnx, cursor, final_response, application_id, new_s
         cursor.execute(query, values)
         cnx.commit()
 
-        logger.info(f"se actualizo correctamente el status")
+        logger.info(f"{request_id} - se actualizo correctamente el status")
 
     except:
-        logger.exception(f"error al acceder a la base de datos")
+        logger.exception(f"{request_id} - error al acceder a la base de datos")
         final_response['ok'] = False
     # en data se devuelve informacion de las querys
     return final_response
 
 
 @manage_db_connection
-def get_skills_list(cnx, cursor, final_response):
+def get_skills_list(cnx, cursor, final_response, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
 
-    logger.info(f"consultando total de habilidades en bd")
+    logger.info(f"{request_id} - consultando total de habilidades en bd")
     try:
 
         query = '''
@@ -814,17 +858,17 @@ def get_skills_list(cnx, cursor, final_response):
         final_response['data'] = results_dict
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     # en data se devuelve informacion de las querys
     return final_response
 
 @manage_db_connection
-def get_total_candidates_data(cnx, cursor, final_response, ):
+def get_total_candidates_data(cnx, cursor, final_response, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
 
-    logger.info(f"consultando informacion de los candidatos")
+    logger.info(f"{request_id} - consultando informacion de los candidatos")
     try:
 
         query = '''
@@ -843,46 +887,55 @@ def get_total_candidates_data(cnx, cursor, final_response, ):
         final_response['data'] = results_dict
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     # en data se devuelve informacion de las querys
     return final_response
 
 @manage_db_connection
-def get_total_companies_data(cnx, cursor, final_response):
+def get_total_companies_data(cnx, cursor, final_response, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
 
-    logger.info(f"consultando informacion de las empresas registradas")
+    logger.info(f"{request_id} - consultando informacion de las empresas registradas")
     try:
 
         query = '''
                 SELECT 
-                            sector,
-                            COUNT(company_id) AS sector_count
-                FROM        Empresas
-                GROUP BY    sector
+                    (SELECT COUNT(*) FROM empresas) AS number_of_companies,
+                    JSON_OBJECTAGG(sector_empresa.company_type, sector_counts.number_of_companies) AS business_sector
+                FROM 
+                    sector_empresa
+                JOIN 
+                    (
+                        SELECT 
+                            empresas.company_type,
+                            COUNT(*) AS number_of_companies
+                        FROM 
+                            empresas
+                        GROUP BY 
+                            empresas.company_type
+                    ) AS sector_counts
+                    ON sector_empresa.company_type_id = sector_counts.company_type;
                 '''
 
         cursor.execute(query)
         results_dict = cursor.fetchall()
 
-        #sumamos la cantidad de compañoas de distintos sectores para obtener el total de empresas registradas
-        total_companies = sum(item["sector_count"] for item in results_dict)
-        final_response['data'] = {'number_of_companies': total_companies,
-                                  'bussines_sector': results_dict}
+
+        final_response['data'] = results_dict
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     # en data se devuelve informacion de las querys
     return final_response
 
 @manage_db_connection
-def get_total_job_offers(cnx, cursor, final_response):
+def get_total_job_offers(cnx, cursor, final_response, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
-    logger.info(f"consultando informacion de ofertas de trabajo")
+    logger.info(f"{request_id} - consultando informacion de ofertas de trabajo")
     try:
 
         query = '''
@@ -912,17 +965,17 @@ def get_total_job_offers(cnx, cursor, final_response):
         }
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     # en data se devuelve informacion de las querys
     return final_response
 
 
 @manage_db_connection
-def get_total_successful_job_offers(cnx, cursor, final_response):
+def get_total_successful_job_offers(cnx, cursor, final_response, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
-    logger.info(f"consultando informacion de ofertas de trabajo exitosas")
+    logger.info(f"{request_id} - consultando informacion de ofertas de trabajo exitosas")
     try:
 
         query = '''
@@ -955,17 +1008,17 @@ def get_total_successful_job_offers(cnx, cursor, final_response):
         }
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     # en data se devuelve informacion de las querys
     return final_response
 
 
 @manage_db_connection
-def get_companies_list(cnx, cursor, final_response):
+def get_companies_list(cnx, cursor, final_response, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
-    logger.info(f"consultando lista de compañias registradas")
+    logger.info(f"{request_id} - consultando lista de compañias registradas")
     try:
 
         query = '''
@@ -980,13 +1033,13 @@ def get_companies_list(cnx, cursor, final_response):
         final_response['data'] = results_dict
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     # en data se devuelve informacion de las querys
     return final_response
 
 @manage_db_connection
-def upload_work_experience(cnx, cursor, final_response, candidate_id, job_id, company_id, start_date, end_date):
+def upload_work_experience(cnx, cursor, final_response, candidate_id, job_id, company_id, start_date, end_date, request_id=None):
     final_response = {'ok': True,
                       'data': {}}
     try:
@@ -1011,19 +1064,19 @@ def upload_work_experience(cnx, cursor, final_response, candidate_id, job_id, co
         cursor.execute(query, values)
         cnx.commit()
 
-        logger.info(f"se cargo correctamente la experiencia del candidato {candidate_id}")
+        logger.info(f"{request_id} - se cargo correctamente la experiencia del candidato {candidate_id}")
 
     except:
-        logger.exception(f"error al acceder a la base de datos")
+        logger.exception(f"{request_id} - error al acceder a la base de datos")
         final_response['ok'] = False
 
     return final_response
 
 @manage_db_connection
-def get_job_type_list(cnx, cursor, final_response, ):
+def get_job_type_list(cnx, cursor, final_response,request_id=None):
     final_response = {'ok': True,
                       'data': {}}
-    logger.info(f"consultando lista de empleos registrados")
+    logger.info(f"{request_id} - consultando lista de empleos registrados")
     try:
 
         query = '''
@@ -1039,7 +1092,7 @@ def get_job_type_list(cnx, cursor, final_response, ):
         final_response['data'] = results_dict
 
     except:
-        logger.exception(f"{request_id} - error al acceder a la bd")
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
         final_response['ok'] = False
     # en data se devuelve informacion de las querys
     return final_response

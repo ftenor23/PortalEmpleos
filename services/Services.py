@@ -1,4 +1,3 @@
-import bp as bp
 from flask import Blueprint, g, request
 
 from config import ServerConfig
@@ -8,10 +7,11 @@ logger = ServerConfig.rootLogger.getChild(__name__)
 SERVICE_NAME = 'v1'
 bp = Blueprint("Services", __name__, url_prefix='/portalEmpleos/' + SERVICE_NAME + '/')
 
-@bp.route('/echo', methods=['POST'])
+@bp.route('/echo',methods=['POST'])
 def echo():
-    logger.info(f"ingresando a echo")
-    return "echo ok"
+    logger.info(f"{g.request_id} - ingresando a echo")
+    return {'code': '0200',
+            'description': 'ok'}
 
 # 1)
 # Servicio que se encarga de registrar generar usuario para un candidato
@@ -88,6 +88,7 @@ def login(data_request):
 # Indica el proceso de carga de nuevas empresas en el portal.
 @bp.route('/createNewCompany', methods=['POST'])
 @AuthController.token_required(endpoint='createNewCompany', service_required=False)
+@AuthController.employer_validation()
 def create_new_company(data_request):
     logger.info(f"{g.request_id} - ingresando a createNewCompany")
 
@@ -95,6 +96,7 @@ def create_new_company(data_request):
         name = data_request['name']
         description = data_request['description']
         tax_id = data_request['tax_id']
+        company_type = data_request['company_type']
     except:
         logger.exception(f"{g.request_id} - mensaje malformado")
         return {"code": "0400", "description": "bad request"}, 400
@@ -102,7 +104,8 @@ def create_new_company(data_request):
     logger.info(f"{g.request_id} - validacion de datos exitosa")
     return Controller.create_new_company(name=name,
                                          description=description,
-                                         tax_id=tax_id)
+                                         tax_id=tax_id,
+                                         company_type=company_type)
 
 
 # 5)
@@ -110,6 +113,7 @@ def create_new_company(data_request):
 # se podrá cargar a través de este servicio
 @bp.route('/createNewJob', methods=['POST'])
 @AuthController.token_required(endpoint='createNewJob', service_required=False)
+@AuthController.employer_validation()
 def create_new_job(data_request):
     logger.info(f"{g.request_id} - ingresando a createNewJob")
 
@@ -132,14 +136,13 @@ def create_new_job(data_request):
 # podrá crear un anuncio para una oferta laboral con este servicio
 @bp.route('/createJobOffer', methods=['POST'])
 @AuthController.token_required(endpoint='createJobOffer', service_required=False)
-# TODO agregar user_validation para validar que el id de usuario corresponda a un empleador
+@AuthController.employer_validation()
 def create_job_offer(data_request):
     logger.info(f"{g.request_id} - ingresando a createJobOffer")
 
     try:
         company_id = data_request['company_id']
         job_id = data_request['job_id']
-        description = data_request['description']
         salary = data_request['salary']
         location = data_request['location']
     except:
@@ -149,7 +152,6 @@ def create_job_offer(data_request):
     logger.info(f"{g.request_id} - validacion de datos exitosa")
     return Controller.create_job_offer(company_id=company_id,
                                        job_id=job_id,
-                                       description=description,
                                        salary=salary,
                                        location=location)
 
@@ -160,6 +162,7 @@ def create_job_offer(data_request):
 # podrá presentarse a los puestos de trabajo que desee
 @bp.route('/applyForAJob', methods=['POST'])
 @AuthController.token_required(endpoint='applyForAJob', service_required=False)
+@AuthController.candidate_validation()
 def apply_for_a_job(data_request):
     logger.info(f"{g.request_id} - ingresando a applyForAJob")
 
@@ -180,6 +183,7 @@ def apply_for_a_job(data_request):
 # todo validar que el user que consume el servicio sea un empleador/reclutador
 @bp.route('/getApplicantsInformation', methods=['POST'])
 @AuthController.token_required(endpoint='getApplicantsInformation', service_required=False)
+@AuthController.employer_validation()
 def get_applicants_information(data_request):
     logger.info(f"{g.request_id} - ingresando a /getApplicantsInformation")
 
@@ -198,6 +202,7 @@ def get_applicants_information(data_request):
 # Como candidato, se pueden consultar los puestos de trabajo disponibles.
 @bp.route('/getAvailableJobs', methods=['POST'])
 @AuthController.token_required(endpoint='getAvailableJobs', service_required=False)
+@AuthController.candidate_validation()
 def get_available_jobs(data_request):
     logger.info(f"{g.request_id} - ingresando a /getAvailableJobs")
 
@@ -219,6 +224,7 @@ def get_available_jobs(data_request):
 # Se obtiene una lista de postulaciones (vigentes o no) del usuario seleccionado.
 @bp.route('/getUserApplications', methods=['POST'])
 @AuthController.token_required(endpoint='getUserApplications', service_required=False)
+@AuthController.candidate_validation()
 def get_user_applications(data_request):
     logger.info(f"{g.request_id} - ingresando a /getUserApplications")
 
@@ -275,6 +281,7 @@ def get_applications_with_company_id(data_request):
 # El empleador puede aceptar o rechazar una postulación.
 @bp.route('/changeApplicationStatus', methods=['POST'])
 @AuthController.token_required(endpoint='changeApplicationStatus', service_required=False)
+@AuthController.employer_validation()
 def change_application_status(data_request):
     logger.info(f"{g.request_id} - ingresando a /changeApplicationStatus")
 
@@ -374,7 +381,7 @@ def get_job_type_list(data_request):
 # registradas en base de datos, necesarias para el momento de onboarding de un usuario
 @bp.route('/getSkillsList', methods=['POST'])
 @AuthController.token_required(endpoint='getSkillsList', service_required=False)
-def get_job_type_list(data_request):
+def get_skills_list(data_request):
     logger.info(f"{g.request_id} - ingresando a /getSkillsList")
 
     logger.info(f"{g.request_id} - validacion de datos exitosa")

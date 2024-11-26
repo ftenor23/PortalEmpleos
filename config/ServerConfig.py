@@ -1,12 +1,8 @@
-import socket
-import os
-from concurrent.futures import ThreadPoolExecutor
-from logging.handlers import RotatingFileHandler
 import logging
 from pathlib import Path
 import configparser
 import mysql.connector.pooling
-import urllib3
+
 
 ROOT_DIR = Path(__file__).parent.parent
 properties = configparser.ConfigParser()
@@ -15,6 +11,7 @@ APP_PORT = properties.get('APP', 'app_port')
 APP_DEBUG = properties.get('APP', 'app_debug')
 ENVIRONMENT = properties.get('APP', 'environment')
 secret_key = properties.get('AUTH', 'secret_key')
+token = properties.get('TOKEN', 'token')
 
 # configuracion de los logs
 rootLogger = logging.getLogger()

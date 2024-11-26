@@ -8,7 +8,6 @@ TOKEN_EXPIRATION_IN_MINUTES = ServerConfig.token_expiration_in_minutes
 TOKEN_LIST = dict()
 SANCTIONS = dict()
 SERVICE_NAME = "auth"
-LOCAL_IP = ServerConfig.local_ip
 bp = Blueprint("AuthV2", __name__, url_prefix='/auth/' + '/')
 
 @bp.route('/getToken')

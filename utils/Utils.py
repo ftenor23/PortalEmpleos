@@ -1,5 +1,8 @@
+import json
+
 from config import ServerConfig
 import jwt
+from flask import g
 
 from managers import Manager
 
@@ -31,6 +34,7 @@ def register_user_lenght_validation(name, last_name, email, password, resume_url
 
 
 def status_validation(new_status):
+
     return new_status in ['0', '1', '2']
 
 
@@ -56,13 +60,15 @@ def create_user(name, last_name, email, password, is_candidate, resume_url=None,
                                                last_name=last_name,
                                                email=email,
                                                password=password,
-                                               is_candidate=is_candidate)
+                                               is_candidate=is_candidate,
+                                               request_id=g.request_id)
 
     if not create_user_response['ok']:
         logger.info(f"{g.request_id} - error al crear usuario")
         return {'ok': False}
 
-    get_user_id_response = Manager.get_user_id_with_email(email=email)
+    get_user_id_response = Manager.get_user_id_with_email(email=email,
+                                                          request_id=g.request_id)
 
     if not get_user_id_response['ok'] or not get_user_id_response['data']:
         logger.info(f"{g.request_id} - error al obtener user_id")
@@ -73,14 +79,16 @@ def create_user(name, last_name, email, password, is_candidate, resume_url=None,
     if is_candidate:
 
         insert_candidate_resume_response = Manager.insert_candidate_resume_url(user_id=user_id,
-                                                                               resume_url=resume_url)
+                                                                               resume_url=resume_url,
+                                                                               request_id=g.request_id)
 
         if not insert_candidate_resume_response['ok']:
             logger.info(f"{g.request_id} - error al cargar cv")
             return {'ok': False}
 
         insert_candidate_skills_response = Manager.insert_candidate_skills(skill_list=skill_list,
-                                                                           user_id=user_id)
+                                                                           user_id=user_id,
+                                                                           request_id=g.request_id)
 
         if not insert_candidate_skills_response['ok']:
             logger.info(f"{g.request_id} - error al cargar habilidades")
@@ -89,7 +97,8 @@ def create_user(name, last_name, email, password, is_candidate, resume_url=None,
     else:
 
         insert_company_response = Manager.insert_employer_actual_company(user_id=user_id,
-                                                                         company_id=company_id)
+                                                                         company_id=company_id,
+                                                                         request_id=g.request_id)
 
         if not insert_company_response['ok']:
             logger.info(f"{g.request_id} - error al cargar lugar de trabajo")
@@ -99,3 +108,8 @@ def create_user(name, last_name, email, password, is_candidate, resume_url=None,
     return final_response
 
 
+def format_candidate_experience(data):
+    for person in data:
+        person['experience'] = json.loads(person['experience'])
+
+    return data

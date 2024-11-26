@@ -12,4 +12,10 @@ get_token_code_map = {
     500: "Internal error"
 }
 
+user_verify_code_map = {
+    '1401': 'invalid user_id',
+    '1404': 'unauthorized user',
+    '1500': 'internal error'
+}
+
 token_expiration_in_minutes = 30

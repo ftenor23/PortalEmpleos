@@ -3,8 +3,12 @@ from flask import Flask, g, request
 from config import ServerConfig
 import time, datetime
 import json
+from services import Services, Auth
 
 app = Flask(__name__, instance_relative_config=True)
+#autorizamos el bp de auth y services
+app.register_blueprint(Services.bp)
+app.register_blueprint(Auth.bp)
 logger = ServerConfig.rootLogger.getChild(__name__)
 
 @app.before_request
@@ -14,10 +18,14 @@ def before_request():
         ahora = datetime.datetime.now()
         request_id = ahora.strftime("%Y%m%d%H%M%S%f")
         g.request_id = request_id
-        g.id_user = ""
+        g.user_id = ""
+
+        if 'user_id' in request.headers:
+            g.user_id = request.headers['user_id']
+
         logger.info(f"{request_id} - seteo de datos ok")
     except:
-        logger.exception(f"error en befor request")
+        logger.exception(f"error en before request")
 
 
 
