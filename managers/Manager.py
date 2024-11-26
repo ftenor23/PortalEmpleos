@@ -236,7 +236,12 @@ def get_user_data(cnx, cursor, final_response, email, password, request_id=None)
         query_login = """
                     SELECT  user_id,
                             name,
-                            last_name
+                            last_name,
+                            CASE 
+                                WHEN role = 0 THEN 'candidate'
+                                WHEN role = 1 THEN 'employer'
+                                ELSE 'unknown'
+                            END AS role_description
                     FROM    usuarios
                     WHERE   email = %s 
                     AND     encrypted_password = %s
@@ -251,9 +256,11 @@ def get_user_data(cnx, cursor, final_response, email, password, request_id=None)
             user_id = results_dict['user_id']
             first_name = results_dict['name']
             last_name = results_dict['last_name']
+            role_description = results_dict['role_description']
             final_response['data'] = {'user_id': user_id,
                                       'first_name': first_name,
-                                      'last_name': last_name}
+                                      'last_name': last_name,
+                                      'role': role_description}
 
     except:
         logger.exception(f"{request_id} - error al realizar login")
