@@ -321,8 +321,8 @@ def get_stats(data_request):
         if 'total_job_offers' in data_request:
             total_job_offers = data_request['total_job_offers']
 
-        if 'succesfull_job_offers' in data_request:
-            successful_job_offers = data_request['successfull_job_offers']
+        if 'successful_job_offers' in data_request:
+            successful_job_offers = data_request['successful_job_offers']
     except:
         logger.exception(f"{g.request_id} - mensaje malformado")
         return {"code": "0400", "description": "bad request"}, 400
@@ -399,3 +399,11 @@ def get_skills_list(data_request):
     logger.info(f"{g.request_id} - validacion de datos exitosa")
 
     return Controller.get_skills_list()
+
+
+@bp.route('/getLocations', methods=['POST'])
+@AuthController.token_required(endpoint='getLocations', service_required=False)
+def get_locations(data_request):
+    logger.info(f"{g.request_id} - consultando ubicaciones")
+
+    return Controller.get_locations()

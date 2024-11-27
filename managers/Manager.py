@@ -1100,3 +1100,27 @@ def get_job_type_list(cnx, cursor, final_response,request_id=None):
         final_response['ok'] = False
     # en data se devuelve informacion de las querys
     return final_response
+
+
+@manage_db_connection
+def get_locations(cnx, cursor, final_response, request_id=None):
+    final_response = {'ok': True,
+                      'data': {}}
+    logger.info(f"{request_id} - consultando ubicaciones en base de datos")
+    try:
+
+        query = '''
+                    SELECT      *
+                    FROM        Ubicaciones
+                    '''
+
+        cursor.execute(query)
+        results_dict = cursor.fetchall()
+
+        final_response['data'] = results_dict
+
+    except:
+        logger.exception(f"{request_id} - {request_id} - error al acceder a la bd")
+        final_response['ok'] = False
+    # en data se devuelve informacion de las querys
+    return final_response

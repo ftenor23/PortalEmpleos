@@ -41,6 +41,7 @@ get_available_jobs_code_map = {'0200': 'ok',
                                '0500': 'internal error'}
 
 get_user_applications_code_map = {'0200': 'ok',
+                                  '0201': 'no applications were found for the selected candidate_id',
                                   '0400': 'bad request',
                                   '0500': 'internal error'}
 

@@ -355,6 +355,11 @@ def get_user_applications(candidate_id):
         return {'code': '0500',
                 'description': ServiceConfig.get_user_applications_code_map['0500']}
 
+    if not user_applications_response['data']:
+        logger.info(f"{g.request_id} - no se encontraron postulaciones vigentes para el user {candidate_id}")
+        return {'code': '0201',
+                'description': ServiceConfig.get_user_applications_code_map['0201']}
+
     logger.info(f"{g.request_id} - informacion de postulaciones obtenida correctamente")
     logger.info(f"{g.request_id} - se encontraron {len(user_applications_response['data'])} registros")
 
@@ -635,3 +640,17 @@ def get_skills_list():
             'description': ServiceConfig.get_job_type_list_code_map['0200'],
             'data': skill_list_response['data']}
 
+def get_locations():
+
+    locations_response = Manager.get_locations()
+
+    if not locations_response['ok']:
+        logger.info(f"{g.request_id} - error al acceder a la bd")
+        return {'code': '0500',
+                'description': 'internal error, try again later'}
+
+    logger.info(f"{g.request_id} - se obtuvieron {len(locations_response['data'])} ubicaciones")
+
+    return {'code': '0200',
+            'description': 'ok',
+            'data': locations_response['data']}
