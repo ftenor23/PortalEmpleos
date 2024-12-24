@@ -464,10 +464,7 @@ def change_application_status(application_id, new_status):
 
 
 def get_stats(total_candidates, total_companies, total_job_offers, successful_job_offers):
-    data = {'total_candidates': {},
-            'total_companies': {},
-            'total_job_offers': {},
-            'successful_job_offers': {}}
+    data = {}
 
     if total_candidates:
         total_candidates_response = Manager.get_total_candidates_data(request_id=g.request_id)
